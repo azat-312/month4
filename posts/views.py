@@ -1,64 +1,54 @@
 from django.shortcuts import render,HttpResponse, redirect
 from posts.models import Post
-
-from posts.forms import PostCreateForm , SearchForm
-
+from django.views import View
+from posts.forms import PostCreateForm , SearchForm , PostUpdateForm
+from django.views.generic import ListView,DetailView,CreateView
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 
 
-
-def test_view(request):
-    return HttpResponse (f"ну что-то крутое")
+class TestView(View):
+    def get(self,request):
+        return HttpResponse (f"ну что-то крутое")
 
 def html_view(request):
     return render(request, "main.html")
 
-@login_required(login_url="/login/")
-def post_list_view(request):
-    form = SearchForm()
-    query_params = request.GET
-    limit = 3
-    posts = Post.objects.all()
-    search = query_params.get("search")
-    category_id = query_params.get("category")
-    tags = query_params.getlist("tags")
-    ordering = query_params.get("ordering")
-    page = int(query_params.get("page"))if query_params.get("page") else 1
-    if search:
-        posts = posts.filter(Q(title__icontains=search) | Q(content__icontains=search))
-    if category_id:
-        posts = posts.filter(category_id=category_id)
-    if tags:
-        tags =[int (tag)for tag in tags]
-        posts = posts.filter(tags__id__in=tags)
-    if ordering:
-        posts = posts.order_by(ordering)
-    max_pages = posts.count() / limit
-    if round(max_pages) < max_pages:
-        max_pages = round(max_pages) + 1
-    else:
-        max_pages = round(max_pages)
+class PostListView(ListView):
+    model=Post
+    template_name="posts/post_list.html"
+    paginate_by = 3
+    context_object_name = "posts"
 
-    start = (page -1) * limit
-    end = page * limit
-    posts = posts[start:end]
-    context_data={"posts": posts,"form":form, "max_pages": range(1, max_pages+1)}
-    return render(
-        request, "posts/post_list.html",context=context_data
-    )
+class PostDetailView(DetailView):
+    model=Post
+    template_name= "posts/post_detail.html"
+    context_object_name = "post"
+    pk_url_kwarg="post_id"
 
-@login_required(login_url="/login/")    
-def post_detail_view(request,post_id):
-    post = Post.objects.get(id=post_id)
-    return render (request, "posts/post_detail.html", context={"post":post})
+class PostCreateView(CreateView):
+    model = Post
+    success_url = "posts/class"
+    form_class =PostUpdateForm
+    template_name = "posts/post_create.html"
+
 
 
 @login_required(login_url="/login/")
-def create_post_view(request):
-    form = PostCreateForm(request.POST,request.FILES)
-    if form.is_valid():
-        form.save()
-        return redirect("/posts/")
-    else:
-        return render(request,'posts/create_post.html',{'form':form})
+def update_post_view(request,post_id):
+    try:
+        post = Post.objects.get(id=post_id)
+    except Post.DoesNotExist:
+        return HttpResponse ("no post")
+    if request.method == "GET":
+        form= PostUpdateForm(instance=post)
+        return render(request, "posts/update_post.html",context={"form":form})
+    if request.method == "POST":
+        form = PostUpdateForm(request.POST,request.FILES, instance=post)
+        if not form.is_valid():
+            return render(request, "posts/update_post.html",context={"form":form})
+        elif form.is_valid():
+            form.save()
+            return redirect("/profile/")
+        else:
+            return HttpResponse ("fuck is not work try again")

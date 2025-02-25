@@ -1,0 +1,19 @@
+{%extends 'main.html' %}
+{%load static%}
+
+
+{%block content%}
+<h1 class="mt-5" style="text-algin: center:">
+    PROFILE
+</h1>
+
+<div class="container">
+    <img src="/media/{{user.profile.avatar.url}}"alt="profile picture" style="width: 20%;height:70%; border-radius:50%;">
+
+<h2>{{user.username}}</h2>
+<h3>{{user.first_name}}</h3>
+<h3>{{user.last_rname}}</h3>
+<h3>{{user.email}}</h3>
+<h2>{{user.profile.age}}</h2>
+ 
+{%endblock%}
